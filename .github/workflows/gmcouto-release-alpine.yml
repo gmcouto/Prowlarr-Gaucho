@@ -101,4 +101,24 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            PROWLARR_VERSION=${{ steps.version.outputs.version }}
           provenance: false
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES="Built from upstream Prowlarr ${VERSION} with cardigann/langsubs and gmcouto/mergeheader.
+
+          Docker: \`ghcr.io/gmcouto/prowlarr:${VERSION}\`"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$VERSION" --notes "$NOTES"
+          else
+            gh release create "$TAG" --title "$VERSION" --notes "$NOTES"
+          fi
+
