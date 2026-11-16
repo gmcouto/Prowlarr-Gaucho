@@ -298,7 +298,7 @@ namespace NzbDrone.Core.IndexerVersions
                 var definitionsFolder = Path.Combine(startupFolder, "Definitions");
                 var saveFile = Path.Combine(definitionsFolder, "indexers.zip");
 
-                _httpClient.DownloadFile("https://github.com/gmcouto/Prowlarr-Indexers/raw/refs/heads/v11/v11.zip", saveFile);
+                _httpClient.DownloadFile($"https://github.com/gmcouto/Prowlarr-Gaucho-Indexers/raw/refs/heads/v{DEFINITION_VERSION}/v{DEFINITION_VERSION}.zip", saveFile);
 
                 using (var archive = ZipFile.OpenRead(saveFile))
                 {
