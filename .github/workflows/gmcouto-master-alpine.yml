@@ -158,11 +158,11 @@ jobs:
           TAG="v${VERSION}"
           NOTES="Built from upstream Prowlarr ${VERSION} with cardigann/langsubs and gmcouto/mergeheader.
 
-          Docker: \`ghcr.io/gmcouto/prowlarr:${VERSION}\`"
+          Docker: \`ghcr.io/gmcouto/prowlarr-gaucho:${VERSION}\`"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --title "$VERSION" --notes "$NOTES"
+            gh release edit "$TAG" --title "$VERSION" --notes "$NOTES" --draft=false
           else
-            gh release create "$TAG" --title "$VERSION" --notes "$NOTES"
+            gh release create "$TAG" --title "$VERSION" --notes "$NOTES" --latest
           fi
 
