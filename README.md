@@ -78,6 +78,16 @@ Thank you to [<img src="https://resources.jetbrains.com/storage/products/company
 ### License
 
 - [GNU GPL v3](http://www.gnu.org/licenses/gpl.html)
+
+## Prowlarr-Gaucho fork
+
+This is a concurrent fork of [Prowlarr/Prowlarr](https://github.com/Prowlarr/Prowlarr). The `master` branch tracks upstream:
+
+- **`master`** = latest stable upstream Prowlarr release + our feature branches (`cardigann/langsubs`, `gmcouto/mergeheader`, `gmcouto/infra`). Version numbers match upstream exactly.
+- **[`sync-upstream-master`](.github/workflows/sync-upstream-master.yml)** runs daily: merges the latest stable upstream tag into `master`, then re-merges the feature branches. On merge failure it opens an issue instead of pushing.
+- **[`gmcouto-master-alpine`](.github/workflows/gmcouto-master-alpine.yml)** builds `master` on every push: frontend + musl x64/arm64 backend, multi-arch Docker image to `ghcr.io/gmcouto/prowlarr-gaucho:<version>` (`:latest`), tags `v<upstream-version>` and creates a GitHub release.
+
+Docker: `ghcr.io/gmcouto/prowlarr-gaucho:latest`
 - Copyright 2010-2025
 
 Icon Credit - [Box vector created by freepik - www.freepik.com](https://www.freepik.com/vectors/box)
