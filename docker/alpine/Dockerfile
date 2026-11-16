@@ -28,8 +28,8 @@ RUN apk add --no-cache \
 COPY docker/alpine/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-COPY _artifacts/linux-musl-x64/net8.0/Prowlarr /tmp/prowlarr-amd64
-COPY _artifacts/linux-musl-arm64/net8.0/Prowlarr /tmp/prowlarr-arm64
+COPY _artifacts/linux-musl-x64/net10.0/Prowlarr /tmp/prowlarr-amd64
+COPY _artifacts/linux-musl-arm64/net10.0/Prowlarr /tmp/prowlarr-arm64
 
 RUN case "${TARGETARCH}" in \
       amd64) SRC=/tmp/prowlarr-amd64 ;; \
