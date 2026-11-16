@@ -10,11 +10,12 @@ on:
 
 jobs:
   action:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       issues: write
       pull-requests: write
+      discussions: write
     steps:
       - uses: dessant/label-actions@v5
         with:
