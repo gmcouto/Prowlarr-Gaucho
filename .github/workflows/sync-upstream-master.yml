@@ -68,7 +68,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.WORKFLOWS_TOKEN }}
         run: |
+          VERSION="${{ steps.upstream.outputs.version }}"
           TAG="${{ steps.upstream.outputs.tag }}"
+          git fetch --force "https://github.com/${UPSTREAM_REPO}.git" "refs/tags/${TAG}:refs/tags/${TAG}"
           if git merge-base --is-ancestor "${TAG}" HEAD 2>/dev/null; then
             echo "master already contains ${TAG}; skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -76,11 +78,10 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Fetch branches and upstream tag
+      - name: Fetch feature branches
         if: steps.skip.outputs.skip != 'true'
         run: |
           git fetch origin "${LANGSUBS_BRANCH}" "${MERGEHEADER_BRANCH}" "${INFRA_BRANCH}"
-          git fetch --force "https://github.com/${UPSTREAM_REPO}.git" "refs/tags/${{ steps.upstream.outputs.tag }}:refs/tags/${{ steps.upstream.outputs.tag }}"
 
       - name: Merge upstream into master
         if: steps.skip.outputs.skip != 'true'

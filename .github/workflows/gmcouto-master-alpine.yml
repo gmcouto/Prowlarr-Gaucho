@@ -79,12 +79,16 @@ jobs:
 
       - name: Build musl backend (x64 + arm64)
         run: |
-          dotnet msbuild -restore src/Prowlarr.sln \
-            -p:SelfContained=True \
-            -p:Configuration=Release \
-            -p:Platform=Posix \
-            -p:RuntimeIdentifiers=linux-musl-x64\;linux-musl-arm64 \
+          common_args=(
+            -restore src/Prowlarr.sln
+            -p:SelfContained=True
+            -p:Configuration=Release
+            -p:Platform=Posix
+            -p:NuGetAudit=false
             -t:PublishAllRids
+          )
+          dotnet msbuild "${common_args[@]}" -p:RuntimeIdentifiers=linux-musl-x64
+          dotnet msbuild "${common_args[@]}" -p:RuntimeIdentifiers=linux-musl-arm64
         env:
           PROWLARRVERSION: ${{ steps.version.outputs.version }}
           BUILD_SOURCEBRANCHNAME: master
