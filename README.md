@@ -88,6 +88,7 @@ This is a concurrent fork of [Prowlarr/Prowlarr](https://github.com/Prowlarr/Pro
 - **[`gmcouto-master-alpine`](.github/workflows/gmcouto-master-alpine.yml)** builds `master` on every push: frontend + musl x64/arm64 backend, multi-arch Docker image to `ghcr.io/gmcouto/prowlarr-gaucho:<version>` (`:latest`), tags `v<upstream-version>` and creates a GitHub release.
 
 Docker: `ghcr.io/gmcouto/prowlarr-gaucho:latest`
+
 - Copyright 2010-2025
 
 Icon Credit - [Box vector created by freepik - www.freepik.com](https://www.freepik.com/vectors/box)
