@@ -1,0 +1,145 @@
+name: Sync upstream master
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+    inputs:
+      force_version:
+        description: 'Override upstream version (e.g. 3.0.2.5777). Leave empty to use latest stable release.'
+        required: false
+        type: string
+
+concurrency:
+  group: sync-upstream-master
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  UPSTREAM_REPO: Prowlarr/Prowlarr
+  LANGSUBS_BRANCH: cardigann/langsubs
+  MERGEHEADER_BRANCH: gmcouto/mergeheader
+  INFRA_BRANCH: gmcouto/infra
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: master
+          token: ${{ secrets.WORKFLOWS_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Resolve upstream version
+        id: upstream
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOWS_TOKEN }}
+        run: |
+          if [ -n "${{ inputs.force_version }}" ]; then
+            VERSION="${{ inputs.force_version }}"
+            TAG="v${VERSION}"
+            echo "Using forced version: ${VERSION}"
+          else
+            RELEASE=$(gh api "repos/${UPSTREAM_REPO}/releases?per_page=100" -q '[.[] | select(.draft == false and .prerelease == false)][0].tag_name')
+            if [ -z "$RELEASE" ] || [ "$RELEASE" = "null" ]; then
+              echo "No stable upstream release found; aborting."
+              exit 1
+            fi
+            TAG="$RELEASE"
+            VERSION="${TAG#v}"
+            echo "Latest stable upstream release: ${VERSION} (${TAG})"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Skip if tag already synced
+        id: skip
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOWS_TOKEN }}
+        run: |
+          TAG="${{ steps.upstream.outputs.tag }}"
+          if git merge-base --is-ancestor "${TAG}" HEAD 2>/dev/null; then
+            echo "master already contains ${TAG}; skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch branches and upstream tag
+        if: steps.skip.outputs.skip != 'true'
+        run: |
+          git fetch origin "${LANGSUBS_BRANCH}" "${MERGEHEADER_BRANCH}" "${INFRA_BRANCH}"
+          git fetch --force "https://github.com/${UPSTREAM_REPO}.git" "refs/tags/${{ steps.upstream.outputs.tag }}:refs/tags/${{ steps.upstream.outputs.tag }}"
+
+      - name: Merge upstream into master
+        if: steps.skip.outputs.skip != 'true'
+        id: sync
+        run: |
+          set -e
+          VERSION="${{ steps.upstream.outputs.version }}"
+          TAG="${{ steps.upstream.outputs.tag }}"
+
+          git checkout master
+          if git merge-base --is-ancestor "${TAG}" master; then
+            echo "master already contains ${TAG}; nothing to do."
+            echo "merge_failed=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git merge --no-ff "${TAG}" -m "Merge upstream v${VERSION}" || {
+            echo "merge_failed=upstream-${TAG}" >> "$GITHUB_OUTPUT"
+            git diff --name-only --diff-filter=U > /tmp/conflicts.txt || true
+            git merge --abort || true
+            exit 1
+          }
+
+          git merge --no-ff "origin/${LANGSUBS_BRANCH}" -m "Merge cardigann/langsubs for master ${VERSION}"
+          git merge --no-ff "origin/${MERGEHEADER_BRANCH}" -m "Merge gmcouto/mergeheader for master ${VERSION}"
+          git merge --no-ff "origin/${INFRA_BRANCH}" -m "Merge gmcouto/infra for master ${VERSION}"
+
+          echo "merge_failed=" >> "$GITHUB_OUTPUT"
+
+      - name: Open issue on merge failure
+        if: failure() && steps.skip.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOWS_TOKEN }}
+        run: |
+          VERSION="${{ steps.upstream.outputs.version }}"
+          TAG="${{ steps.upstream.outputs.tag }}"
+          BODY="Master sync failed while merging upstream ${TAG} into master.
+
+          Resolve conflicts on \`master\` against the feature branches (\`${LANGSUBS_BRANCH}\`, \`${MERGEHEADER_BRANCH}\`, \`${INFRA_BRANCH}\`), then push the branch manually or re-run this workflow with \`force_version: ${VERSION}\`."
+
+          if [ -f /tmp/conflicts.txt ] && [ -s /tmp/conflicts.txt ]; then
+            CONFLICTS=$(cat /tmp/conflicts.txt)
+            BODY="${BODY}
+
+          Conflicted files:
+          \`\`\`
+          ${CONFLICTS}
+          \`\`\`"
+          fi
+
+          gh issue create \
+            --title "Upstream sync failed for ${TAG}" \
+            --label "upstream-sync" \
+            --body "$BODY" || \
+          gh issue create \
+            --title "Upstream sync failed for ${TAG}" \
+            --body "$BODY"
+
+      - name: Push master branch
+        if: steps.skip.outputs.skip != 'true' && success()
+        run: |
+          git push --force-with-lease origin master
